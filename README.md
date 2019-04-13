@@ -1,7 +1,6 @@
 # README #
 
-### This repository is for the learning to augment simplified model (ICDM_2018)  
-
+### This repository code for the model:"learning to augment with feature side information"
  It includes code for artificial dataset and real world dataset experiment   
 
 ### How do I get set up?   
