@@ -5,7 +5,8 @@
 
 ### How do I get set up?   
 
-*You will need python 2.7  
+#####You will need 
+*python 2.7  
 *Tensorflow 1.7.0  
 *Tensorboard  
 *mlxtend  
