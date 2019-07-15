@@ -1,5 +1,6 @@
 data
 __pycache__
+*__pycache__
 *.npy
 *.csv
 *.swp
@@ -11,4 +12,6 @@ __pycache__
 output
 SD1
 SD2
+SD1_output
+SD2_output
 *.csv
