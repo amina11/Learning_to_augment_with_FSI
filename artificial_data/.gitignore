@@ -1,0 +1,17 @@
+data
+__pycache__
+*__pycache__
+*.npy
+*.csv
+*.swp
+*.DS_Store
+*.sh
+1
+*nohup
+*.ipynb
+output
+SD1
+SD2
+SD1_output
+SD2_output
+*.csv
