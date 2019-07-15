@@ -25,18 +25,24 @@ train_y = np.delete(train_yy,(zero_row ), axis=0)
 [train_num, output_dim] = train_y.shape
 batch_num = int(train_num / args.batch_size)
 
+
 ## 3. fix seed for graph and numpy operations
 tf.reset_default_graph()
 tf.set_random_seed(args.seed)
 
 ## 4.create output folders to save the log files and trained model
-## ./output/model_name
-output_dir = args.output_dir + args.model_name
-am_util.create_dir(output_dir)
-##  ./output/model_name/logs/
-am_util.create_dir(os.path.join(output_dir, "logs"))
-##  ./output/model_name/models/
-am_util.create_dir(os.path.join(output_dir, "models"))
+#main_output_dir = output/dataname/cross_validation
+main_output_dir = args.output_dir + args.data_name + '/cross_validation'
+am_util.create_dir(main_output_dir)
+
+#model_path = output/dataname/cross_validation/model_name
+modelname = args.model_name +'_epsilon_' + str(args.epsilon) + '_reg_param1_' + str(args.reg_param1) +  '_reg_param2_' + str(args.reg_param2)
+model_path = main_output_dir +'/'+ modelname
+am_util.create_dir(model_path)
+
+
+
+
 
 
 ## 5.define the full graph
@@ -64,16 +70,7 @@ class NNModel(object):
         self.optimizer_f = tf.train.AdamOptimizer(args.lr, name = "opt1").minimize(self.loss_f)
         
         ## build all the summaries and writers
-        self.summaries = tf.summary.merge(self.get_summaries())
-        self.train_summary_writer = tf.summary.FileWriter("%s/logs/train" % output_dir,
-                                                          sess.graph,
-                                                          flush_secs=60)
-        self.val_summary_writer = tf.summary.FileWriter("%s/logs/val" % output_dir,
-                                                        sess.graph,
-                                                        flush_secs=60)
-        self.test_summary_writer = tf.summary.FileWriter("%s/logs/test" % output_dir,
-                                                         sess.graph,
-                                                         flush_secs=60)
+        
         # build a saver object
         self.saver = tf.train.Saver(tf.global_variables() + tf.local_variables())
         
@@ -101,38 +98,36 @@ class NNModel(object):
             tf.summary.scalar("loss", self.loss_f)]
     
     # save the model
-    def save(self, sess, model_name, update_num, overwrite=False):
-        model_filename = "{}/models/{}.cpkt".format(
-            output_model_dir, am_util.get_name(model_name, update_num)
-        )
+    def save(self, sess, model_path,overwrite=False):
+        model_filename = "{}/{}.cpkt".format(model_path, 'best_model')
+
         if not os.path.isfile(model_filename) or overwrite:
             print('saving model to %s...' % model_filename)
             self.saver.save(sess, model_filename)
             
             
     # restore the model        
-    def restore(self, sess, model_name, update_num):
-        model_filename = "{}/models/{}.cpkt".format(
-            output_model_dir, am_util.get_name(model_name, update_num)
-        )
+    def restore(self, sess, model_path):
+        model_filename = "{}/{}.cpkt".format(model_path, 'best_model')
+
         if os.path.isfile(model_filename):
             print('restoring model from %s...' % model_filename)
             self.saver.restore(sess, model_filename)         
     
     # train for the base model 
-    def train_basemodel(self, sess, batch_x, batch_y, update_num, grapher,  display_step=10):
+    def train_basemodel(self, sess, batch_x, batch_y, update_num,  display_step=10):
         feed_dict={self.x: batch_x, self.y_: batch_y, self.is_training: True}
         
         ## Display the logs every kth update
         if update_num % display_step == 0:
-            loss, summaries, _ = sess.run([self.loss_f, self.summaries, self.optimizer_f], feed_dict=feed_dict)
+            loss,  _ = sess.run([self.loss_f, self.optimizer_f], feed_dict=feed_dict)
             print("[update_number:", '%04d]' % (update_num),"training loss = ", "{:.4f} | ".format(loss))
-            grapher.add_summary(summaries, update_num)
+            #grapher.add_summary(summaries, update_num)
         else:
             _ = sess.run(self.optimizer_f, feed_dict=feed_dict)
             
     # final train with the augmented data        
-    def train_final(self, sess, batch_x, batch_y, update_num, grapher, epsilon, display_step=10):
+    def train_final(self, sess, batch_x, batch_y, update_num,  epsilon, display_step=10):
         batch_x1= am_util.augment_data_y1_modified(batch_x, S_30)
         class_label1 = np.zeros([args.batch_size], dtype = 'float32')
         cond1 = sess.run(self.cond, feed_dict={self.x1: batch_x1, self.x: batch_x, self.is_training: False})
@@ -140,17 +135,18 @@ class NNModel(object):
         class_label1[[np.where(cond1 > epsilon)]] = 0
         feed_dict={self.x: batch_x, self.y_: batch_y, self.x1: batch_x1,  self.class_label: class_label1, self.is_training: True}
         ## Display the logs every kth update
+ 
         if update_num % display_step == 0:
-            loss, summaries, _ = sess.run([self.loss_final, self.summaries, self.optimizer_final], feed_dict=feed_dict)
+            loss, _ = sess.run([self.loss_final, self.optimizer_final], feed_dict=feed_dict)
             print("[update_number:", '%04d]' % (update_num),"training loss = ", "{:.4f} | ".format(loss))
-            grapher.add_summary(summaries, update_num)
+            #grapher.add_summary(summaries, update_num)
         else:
             _ = sess.run(self.optimizer_final, feed_dict=feed_dict)
-            
+           
             
         
     # evalute on the validation set, keep the summaries
-    def val(self, sess, val_x, val_y, update_num, grapher, display_step=10):
+    def val(self, sess, val_x, val_y, update_num,  display_step=10):
         #loss_vector = []
         feed_dict = {self.x: val_x, self.y_: val_y, self.is_training: False}
         # get all metrics here
@@ -158,9 +154,9 @@ class NNModel(object):
             loss  = sess.run(self.loss_f, feed_dict=feed_dict)
             #loss_vector.append(loss)
             print("[update_number:", '%04d]' % (update_num),"validation loss = ", "{:.4f} | ".format(loss))
-            loss_summary = tf.Summary()
-            loss_summary.value.add(tag="test_or_val_loss", simple_value=loss)
-            grapher.add_summary(loss_summary, update_num)
+            #loss_summary = tf.Summary()
+            #loss_summary.value.add(tag="test_or_val_loss", simple_value=loss)
+            #grapher.add_summary(loss_summary, update_num)
             return loss
     
     # test and save the best result   
@@ -188,17 +184,18 @@ class EarlyStopping(object):
         self.stopping_step = 0
         self.best_loss = np.inf
     
-    def restore(self, sess, model_name, update_num):
-        self.model.restore( sess, model_name, update_num)
+    def restore(self, sess, model_path):
+        self.model.restore( sess, model_path)
 
-    def __call__(self, loss, stopping_criteria, model_name, update_num):
+
+    def __call__(self, loss, stopping_criteria, model_path):
         is_early_stop = False
         print(self.stopping_step)
         if (loss < self.best_loss):
             self.stopping_step = 0
             self.best_loss = loss
             if self.save_best:
-                self.model.save(sess, model_name, update_num, overwrite=True)
+                self.model.save(sess,model_path, overwrite=True)
         else:
             self.stopping_step += 1
 
@@ -237,15 +234,15 @@ for epoch in range(args.epochs):
         batch_index = permutation[(j * args.batch_size): (j + 1) * args.batch_size]
         batch_x = train_x[batch_index, :]
         batch_y = train_y[batch_index, :]
-        model.train_basemodel(sess, batch_x, batch_y, update_num,  model.train_summary_writer, args.display_step)
-        val_loss = model.val(sess, val_x, val_y, update_num, model.val_summary_writer, args.display_step)
+        model.train_basemodel(sess, batch_x, batch_y, update_num,  args.display_step)
+        val_loss = model.val(sess, val_x, val_y, update_num, args.display_step)
         
         ##Early stopping starts after updates
         if update_num > args.start_early_stop and update_num % args.display_step == 0:
-            is_early_stop = early_stop(val_loss, args.stopping_criteria, args.model_name, update_num)
+            is_early_stop = early_stop(val_loss, args.stopping_criteria, model_path)
             print(is_early_stop)
             if is_early_stop:
-                early_stop.restore(sess, args.model_name, update_num)
+                early_stop.restore(sess, model_path)
                 #model.test(sess, test_x, test_y, output_dir)
                 break
 
@@ -263,20 +260,26 @@ for epoch in range(args.epochs):
         batch_x = train_x[batch_index, :]
         batch_y = train_y[batch_index, :]
         
-        model.train_final(sess, batch_x, batch_y, update_num,  model.train_summary_writer, args.epsilon, args.display_step)
-        val_loss = model.val(sess, val_x, val_y, update_num, model.val_summary_writer, args.display_step)
+        model.train_final(sess, batch_x, batch_y, update_num,  args.epsilon, args.display_step)
+        val_loss = model.val(sess, val_x, val_y, update_num, args.display_step)
         
         ##Early stopping 
         if update_num > args.start_early_stop and update_num % args.display_step == 0:
-            is_early_stop = early_stop(val_loss, args.stopping_criteria, args.model_name, update_num)
+            is_early_stop = early_stop(val_loss, args.stopping_criteria, model_path)
             print(is_early_stop)
             if is_early_stop:
-                #early_stop.restore(sess, args.model_name, update_num)
-                #model.test(sess, test_x, test_y, args.output_dir)
-                with open(args.output_dir + '/cross_validation.csv', 'a') as newFile:
-                    headers = ['epsilon', 'reg_param1', 'reg_param2', 'val_loss']
-                    newFileWriter = csv.DictWriter(newFile, fieldnames=headers)
-                    newFileWriter.writeheader()
-                    newFileWriter.writerow({'epsilon': args.epsilon, 'reg_param1': args.reg_param1, 'reg_param2': args.reg_param2, 'val_loss': val_loss})
-    
+                early_stop.restore(sess, model_path)
+                val_loss = model.val(sess, val_x, val_y, update_num, args.display_step)
                 break
+
+
+                #model.test(sess, test_x, test_y, args.output_dir)
+with open(main_output_dir + '/cross_validation.csv', 'a') as newFile:
+    headers = ['epsilon', 'reg_param1', 'reg_param2', 'val_loss']
+    newFileWriter = csv.DictWriter(newFile, fieldnames=headers)
+    newFileWriter.writeheader()
+    newFileWriter.writerow({'epsilon': args.epsilon, 'reg_param1': args.reg_param1, 'reg_param2': args.reg_param2, 'val_loss': val_loss})
+    
+    
+
+

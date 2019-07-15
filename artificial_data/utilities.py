@@ -4,7 +4,7 @@ import numpy as np
 from IPython.display import clear_output, Image, display, HTML
 import scipy.io
 from numpy import genfromtxt
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 import tensorflow.contrib.slim as slim
 from mlxtend.evaluate import mcnemar
 import csv
@@ -50,6 +50,11 @@ def get_arguments():
 
 
 	# actually parse the arguments
+    cmd_args, _ = parser.parse_known_args()
+	# actually parse the arguments
+    return cmd_args
+
+
     return parser.parse_args()
 
 
@@ -125,7 +130,7 @@ def augment_data_y1_modified(batch_x, S):
     row_index = np.arange(batch_size)
     batch_x1[row_index, f1] = 0
     batch_x1[row_index, f2] = batch_x[[row_index, f2]] + batch_x[row_index, f1]
-    return batch_x1                 
+    return batch_x1, f1, f2                 
 
  #3 augment by random pairs
 def augment_Gaussian_noise(batch_x, sigma):
@@ -162,7 +167,6 @@ def split_shuffle_data(X, Y, test_size):
     x_train_pre, x_test, y_train_pre, y_test = train_test_split(X, Y, test_size=test_size)
     x_train, x_val, y_train, y_val = train_test_split(x_train_pre,  y_train_pre, test_size=test_size)
     return x_train, x_val, x_test, y_train, y_val, y_test
-
 ## augmented by random pairs
 def augment_data_randompairs(batch_x):
     batch_size = batch_x.shape[0]
@@ -174,8 +178,4 @@ def augment_data_randompairs(batch_x):
     batch_x1[row_index, f1] = batch_x[row_index, f2]
     batch_x1[row_index, f2] = batch_x[row_index, f1]
     return batch_x1
-
-
-
 '''
-

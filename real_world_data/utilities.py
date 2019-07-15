@@ -4,7 +4,7 @@ import numpy as np
 from IPython.display import clear_output, Image, display, HTML
 import scipy.io
 from numpy import genfromtxt
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 import tensorflow.contrib.slim as slim
 #from mlxtend.evaluate import mcnemar
 import csv
@@ -32,12 +32,12 @@ def get_arguments():
     parser.add_argument('--model_name', type=str, default='ICDM_fx1_y', help="the name of the model")
 	#optimization parameters  
     parser.add_argument('--batch_size', type=int, default="50", help="batchsize (default: 50)")                  
-    parser.add_argument('--epochs', type=int, default="700", help="optimization 1 epoch number (default: 36)")
+    parser.add_argument('--epochs', type=int, default="7", help="optimization 1 epoch number (default: 36)")
     parser.add_argument('--Save_every',  type=int, default="100", help='Save the train and validation loss at after __ update (default: 100)')
     parser.add_argument('--lr', type=float, default="1e-4", help='learning rate (default: 1e-3)')                    
 
 	#early stopping parameters
-    parser.add_argument('--start_early_stop', type=int, default="600", help='Activate early stopping after update_num (default:1900)')                           
+    parser.add_argument('--start_early_stop', type=int, default="6", help='Activate early stopping after update_num (default:1900)')                           
     parser.add_argument('--display_step', type=int, default="10", help='Check every number of update for disply the lossand early stopping (default: 10)')
     parser.add_argument('--stopping_criteria', type=int, default="8", help='exit training if validation error increase continously _ time (default: 5)')    
     

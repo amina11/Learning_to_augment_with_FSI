@@ -61,14 +61,14 @@ class NNModel(object):
         self.y = am_util.build_model(self.x, self.layer_sizes, self.is_training, output_dim, None)  # reuse none so that the variables are created
         self.prob = tf.nn.softmax(self.y, name='prob')
         self.pred = tf.arg_max(self.prob, 1, name='pred')
-        
+
         ##accuarcy 
         self.correct_predictions = tf.equal(self.pred, tf.argmax(self.y_, 1))
         self.accuracy = tf.reduce_mean(tf.cast(self.correct_predictions, "float"), name="accuracy")
         #loss and optimizer
         self.loss_f =  tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.y, labels=self.y_))
         self.optimizer_f = tf.train.AdamOptimizer(args.lr, name = "opt1").minimize(self.loss_f)
-        
+
         ## build all the summaries and writers
         self.summaries = tf.summary.merge(self.get_summaries())
         self.train_summary_writer = tf.summary.FileWriter("%s/logs/train" % output_dir,
@@ -82,7 +82,7 @@ class NNModel(object):
                                                          flush_secs=60)
         # build a saver object
         self.saver = tf.train.Saver(tf.global_variables() + tf.local_variables())
-        
+
         # for augmented data 
         self.y1 = am_util.build_model(self.x1, self.layer_sizes, self.is_training, output_dim, True) # reuse true so that the variables are shared from previosly builded network
         self.cond =  tf.reduce_sum(tf.squared_difference(self.y1, self.y), 1)
@@ -95,12 +95,12 @@ class NNModel(object):
         self.y__filtered = tf.squeeze(tf.gather(self.y_, self.row_index))
         self.loss_fx_y= tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.y1_filterred, labels=self.y__filtered), name = "filtered_reg")
         self.loss_fx_y_filtered = tf.cond(tf.cast(self.is_empty, tf.bool), lambda: tf.constant(0, tf.float32), lambda:self.loss_fx_y) #then corresponding loss is zero, in this way avoid nan
-        
+
         #final loss
         self.final_reg = tf.add(args.reg_param1 * self.loss_y_y1_filtered, args.reg_param2 * self.loss_fx_y_filtered, name="loss_final")
         self.loss_final = tf.add(self.final_reg, self.loss_f, name="loss_final")
         self.optimizer_final = tf.train.AdamOptimizer(args.lr, name = "opt2").minimize(self.loss_final) 
-        
+
     # get  summaries for the tensorboard   
     def get_summaries(self):
         return [
